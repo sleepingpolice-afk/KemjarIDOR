@@ -1,20 +1,24 @@
-const { PrismaClient } = require('@prisma/client')
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-const prisma = new PrismaClient()
-
-exports.getUser = async (req, res) => {
+exports.getUserProfile = async (req, res) => {
     try {
-        const id = Number.parseInt(req.params.id, 10)
-        const user = await prisma.user.findUnique({ where: { id } })
+        const requestedId = parseInt(req.params.id); // ID from URL
+        const loggedInUserId = req.user.id;          // ID from Token (who they are)
 
-        if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found' })
+
+        if (requestedId !== loggedInUserId) {
+            return res.status(403).json({ 
+                success: false, 
+                message: "Forbidden: You cannot view this profile." 
+            });
         }
 
-        const { password, ...userWithoutPassword } = user
-        return res.json({ success: true, user: userWithoutPassword })
-    } catch (err) {
-        console.error('Get user error:', err)
-        return res.status(500).json({ success: false, message: 'Internal server error' })
+        const user = await prisma.user.findUnique({ where: { id: requestedId } });
+        const { password, ...cleanUser } = user;
+        return res.json({ success: true, data: cleanUser });
+
+    } catch (error) {
+        return res.status(500).json({ message: "Server Error" });
     }
-}
+};

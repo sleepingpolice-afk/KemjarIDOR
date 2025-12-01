@@ -23,29 +23,47 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
+    // 1. Retrieve BOTH ID and Token
     const storedUserId = localStorage.getItem("userId")
-    if (!storedUserId) {
+    const storedToken = localStorage.getItem("token")
+
+    // If either is missing, kick them out
+    if (!storedUserId || !storedToken) {
       router.push("/")
       return
     }
 
     setUserId(storedUserId)
-    fetchUserData(storedUserId)
+    // Pass the token to the fetch function
+    fetchUserData(storedUserId, storedToken)
   }, [router])
 
-  const fetchUserData = async (id: string) => {
+  const fetchUserData = async (id: string, token: string) => {
     setLoading(true)
     setError("")
 
     try {
       const response = await fetch(`http://localhost:4000/api/users/${id}`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            // --- THE CRITICAL FIX ---
+            // We must attach the "ID Card" (Token) to get through the door
+            "Authorization": `Bearer ${token}` 
+        },
       })
+
+      // If token is expired or invalid, force logout
+      if (response.status === 401 || response.status === 403) {
+        setError("Session expired or access denied.")
+        setTimeout(handleLogout, 2000) // Redirect after showing error
+        return
+      }
+
       const data = await response.json()
 
       if (data.success) {
-        setUser(data.user)
+        setUser(data.user || data.data) // Check if your backend sends 'user' or 'data'
       } else {
         setError(data.message || "Failed to fetch user data")
       }
@@ -59,6 +77,8 @@ export default function Dashboard() {
   const handleLogout = () => {
     localStorage.removeItem("userId")
     localStorage.removeItem("user")
+    // Don't forget to remove the token too!
+    localStorage.removeItem("token") 
     router.push("/")
   }
 
@@ -110,7 +130,7 @@ export default function Dashboard() {
               Profile Information
             </CardTitle>
             <CardDescription className="text-slate-400">
-              Personal data retrieved from server.
+              Personal data retrieved from secure server.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -118,7 +138,7 @@ export default function Dashboard() {
               <div className="p-4 bg-red-950/30 border border-red-900/50 rounded-lg flex gap-3 text-red-200 items-start">
                 <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-red-400" />
                 <div>
-                  <p className="font-semibold text-red-400">Error</p>
+                  <p className="font-semibold text-red-400">Access Denied</p>
                   <p className="text-sm opacity-90">{error}</p>
                 </div>
               </div>

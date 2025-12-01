@@ -16,12 +16,12 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // pakai local storage karena malas bikin auth context
-    const user = localStorage.getItem("user")
-    if (user) {
-      window.location.href = "/dashboard"
+    // UPDATED: Check for the token, which is the proof of being logged in
+    const token = localStorage.getItem("token")
+    if (token) {
+      router.push("/dashboard") // Better to use router.push in Next.js
     }
-  }, [])
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +29,7 @@ export default function Home() {
     setError("")
 
     try {
+      // Make sure this URL matches your backend (api/auth/login vs 4000/auth/login)
       const response = await fetch("http://localhost:4000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,7 +39,16 @@ export default function Home() {
       const data = await response.json()
 
       if (data.success) {
-        localStorage.setItem("userId", data.userId)
+        // --- THE FIX IS HERE ---
+        
+        // 1. Store the JWT Token (Critical for security)
+        localStorage.setItem("token", data.token)
+
+        // 2. Store the User ID correctly
+        // (Backend now sends 'user' object, so ID is inside data.user.id)
+        localStorage.setItem("userId", data.user.id)
+        
+        // 3. Store full user object if you want (Optional)
         localStorage.setItem("user", JSON.stringify(data.user))
 
         // Redirect to dashboard
@@ -48,6 +58,7 @@ export default function Home() {
       }
     } catch (err) {
       setError("An error occurred. Please try again.")
+      console.error(err)
     } finally {
       setLoading(false)
     }

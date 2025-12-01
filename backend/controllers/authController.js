@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt')
 
 const prisma = new PrismaClient()
@@ -21,7 +22,15 @@ exports.login = async (req, res) => {
     }
 
     const { password: _, ...userWithoutPassword } = user
-    return res.json({ success: true, userId: user.id, user: userWithoutPassword })
+
+    
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    return res.json({ 
+        success: true, 
+        token: token, // Send this token to the frontend
+        user: { id: user.id, name: user.fullName } 
+    });
   } catch (error) {
     console.error('Login error:', error)
     return res.status(500).json({ success: false, message: 'Internal server error' })
