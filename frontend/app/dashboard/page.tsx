@@ -23,18 +23,15 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    // 1. Retrieve BOTH ID and Token
     const storedUserId = localStorage.getItem("userId")
     const storedToken = localStorage.getItem("token")
 
-    // If either is missing, kick them out
     if (!storedUserId || !storedToken) {
       router.push("/")
       return
     }
 
     setUserId(storedUserId)
-    // Pass the token to the fetch function
     fetchUserData(storedUserId, storedToken)
   }, [router])
 
@@ -47,8 +44,6 @@ export default function Dashboard() {
         method: "GET",
         headers: { 
             "Content-Type": "application/json",
-            // --- THE CRITICAL FIX ---
-            // We must attach the "ID Card" (Token) to get through the door
             "Authorization": `Bearer ${token}` 
         },
       })
